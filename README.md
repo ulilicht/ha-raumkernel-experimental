@@ -1,3 +1,10 @@
+⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️
+# THIS IS AN EXPERIMENTAL (TEMPORARY) VERSION OF HA Raumkernel to test version 1.2.14 
+For production use, use this repo: https://github.com/ulilicht/ha-raumkernel 
+
+⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️
+
+
 # Home Assistant Add-on & Integration for Teufel Raumfeld devices
 
 This project provides a Home Assistant integration for Teufel Raumfeld devices, based on `node-raumkernel`.
