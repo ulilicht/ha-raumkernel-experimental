@@ -1,3 +1,7 @@
+## 1.2.17
+
+- Use friendly source names in the UI for soundbar/sounddeck source selection: "Streaming", "Line-in", "Optical", "TV" (instead of the raw `Raumfeld`, `LineIn`, `OpticalIn`, `TV_ARC` values).
+
 ## 1.2.16
 
 - Fix `selectSource` for Soundbars/Sounddecks: include `InstanceID` in `GetDeviceSetting`/`SetDeviceSetting` calls and target the physical room renderer instead of the virtual zone renderer.

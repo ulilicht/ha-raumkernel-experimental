@@ -242,18 +242,30 @@ class RaumfeldMediaPlayer(MediaPlayerEntity):
 
         return None
 
+    # Friendly display names for the raw "Source Select" values reported/accepted
+    # by Soundbars and Sounddecks.
+    _SOURCE_DISPLAY_TO_RAW = {
+        "Streaming": "Raumfeld",
+        "Line-in": "LineIn",
+        "Optical": "OpticalIn",
+        "TV": "TV_ARC",
+    }
+    _SOURCE_RAW_TO_DISPLAY = {v: k for k, v in _SOURCE_DISPLAY_TO_RAW.items()}
+
     @property
     def source_list(self) -> list[str] | None:
         """Return the list of available input sources."""
         if getattr(self, "_source_switching_supported", False):
             # Hardcoded superset of sources. Add-on handles support checks.
-            return ["Raumfeld", "LineIn", "OpticalIn", "TV_ARC"]
+            return ["Streaming", "Line-in", "Optical", "TV"]
         if getattr(self, "_line_in_supported", False):
             return ["Line-in"]
         return None
 
     async def async_select_source(self, source: str) -> None:
         """Select input source."""
+        if getattr(self, "_source_switching_supported", False):
+            source = self._SOURCE_DISPLAY_TO_RAW.get(source, source)
         await self._client.select_source(self._udn, source)
 
     @property
