@@ -1,3 +1,8 @@
+## 1.2.16
+
+- Fix `selectSource` for Soundbars/Sounddecks: include `InstanceID` in `GetDeviceSetting`/`SetDeviceSetting` calls and target the physical room renderer instead of the virtual zone renderer.
+- Add Line-in switching for devices that don't support `Source Select` but have a physical Line-in input (e.g. Stereo M/L/R speakers).
+
 ## 1.2.14
 
 - Add `selectSource` support for Soundbars and Sounddecks (TV_ARC, OpticalIn).
