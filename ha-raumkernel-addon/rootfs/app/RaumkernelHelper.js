@@ -1025,21 +1025,28 @@ class RaumkernelHelper {
         let renderer = this._getRendererForRoom(room);
 
         // For source switching, we want the virtual renderer if possible
-        if (!renderer?.setDeviceSetting) {
+        if (!renderer?.upnpClient) {
             renderer = await this._ensureVirtualRenderer(room);
         }
 
-        if (renderer?.setDeviceSetting) {
+        if (renderer?.upnpClient) {
             console.log(`${LOG_PREFIX.COMMAND} Setting source for ${room.name} to ${source}`);
             try {
-                await renderer.setDeviceSetting("Source Select", source);
+                await new Promise((resolve, reject) => {
+                    renderer.upnpClient.callAction(
+                        "urn:upnp-org:serviceId:RenderingControl",
+                        "SetDeviceSetting",
+                        { InstanceID: 0, Name: "Source Select", Value: source },
+                        (err, res) => err ? reject(err) : resolve(res)
+                    );
+                });
             } catch (err) {
                  console.error(`${LOG_PREFIX.COMMAND} Failed to set source for ${room.name}: ${err.message}`);
                  // We don't throw here to avoid crashing the add-on, but we log it.
                  // This is expected for devices that don't support "Source Select" (e.g. Speakers)
             }
         } else {
-             console.warn(`${LOG_PREFIX.COMMAND} Renderer for ${room.name} does not support setDeviceSetting`);
+             console.warn(`${LOG_PREFIX.COMMAND} Renderer for ${room.name} has no upnpClient`);
         }
     }
 
@@ -1246,7 +1253,14 @@ class RaumkernelHelper {
         console.log(`${LOG_PREFIX.REGISTRY} detectCapabilities for ${rendererUdn}...`);
         try {
             // Probe for Source Select capability
-            await renderer.getDeviceSetting("Source Select");
+            await new Promise((resolve, reject) => {
+                renderer.upnpClient.callAction(
+                    "urn:upnp-org:serviceId:RenderingControl",
+                    "GetDeviceSetting",
+                    { InstanceID: 0, Name: "Source Select" },
+                    (err, res) => err ? reject(err) : resolve(res)
+                );
+            });
             // If it doesn't throw, it's supported
             this._roomCapabilities.set(rendererUdn, true);
             console.log(`${LOG_PREFIX.REGISTRY} ${rendererUdn} supports Source Select`);
