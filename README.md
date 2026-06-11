@@ -1,5 +1,5 @@
 ⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️
-# THIS IS AN EXPERIMENTAL (TEMPORARY) VERSION OF HA Raumkernel to test version 1.2.15c
+# THIS IS AN EXPERIMENTAL (TEMPORARY) VERSION OF HA Raumkernel to test version 1.2.16
 For production use, use this repo: https://github.com/ulilicht/ha-raumkernel 
 
 ⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️

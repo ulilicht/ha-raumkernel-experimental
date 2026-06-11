@@ -299,7 +299,11 @@ wss.on('connection', (ws) => {
                     break;
 
                 case 'selectSource':
-                    await rkHelper.setRoomSource(payload.room, payload.source);
+                    if (payload.source === 'Line-in') {
+                        await rkHelper.setRoomLineIn(payload.room);
+                    } else {
+                        await rkHelper.setRoomSource(payload.room, payload.source);
+                    }
                     break;
 
                 case 'browse': {

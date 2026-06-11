@@ -171,6 +171,7 @@ class RaumfeldMediaPlayer(MediaPlayerEntity):
         self._source_switching_supported = room_data.get(
             "sourceSwitchingSupported", False
         )
+        self._line_in_supported = room_data.get("lineInSupported", False)
 
         # Supported features
         features = (
@@ -186,7 +187,7 @@ class RaumfeldMediaPlayer(MediaPlayerEntity):
             | MediaPlayerEntityFeature.SEEK
         )
 
-        if self._source_switching_supported:
+        if self._source_switching_supported or self._line_in_supported:
             features |= MediaPlayerEntityFeature.SELECT_SOURCE
 
         if now_playing.get("canPlayNext"):
@@ -244,10 +245,12 @@ class RaumfeldMediaPlayer(MediaPlayerEntity):
     @property
     def source_list(self) -> list[str] | None:
         """Return the list of available input sources."""
-        if not getattr(self, "_source_switching_supported", False):
-            return None
-        # Hardcoded superset of sources. Add-on handles support checks.
-        return ["Raumfeld", "LineIn", "OpticalIn", "TV_ARC"]
+        if getattr(self, "_source_switching_supported", False):
+            # Hardcoded superset of sources. Add-on handles support checks.
+            return ["Raumfeld", "LineIn", "OpticalIn", "TV_ARC"]
+        if getattr(self, "_line_in_supported", False):
+            return ["Line-in"]
+        return None
 
     async def async_select_source(self, source: str) -> None:
         """Select input source."""

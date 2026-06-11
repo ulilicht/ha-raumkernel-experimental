@@ -113,8 +113,11 @@ class RaumkernelHelper {
         /** @type {Map<string, RoomInfo>} Room registry keyed by RENDERER UDN */
         this._rooms = new Map();
 
-        /** @type {Map<string, boolean>} Capability cache keyed by RENDERER UDN */
+        /** @type {Map<string, boolean>} Source Select capability cache keyed by RENDERER UDN */
         this._roomCapabilities = new Map();
+
+        /** @type {Map<string, boolean>} Line-in capability cache keyed by RENDERER UDN */
+        this._roomLineInCapabilities = new Map();
         
         /** @type {{isReady: boolean, availableRooms: RoomState[], favourites: []}} */
         this._state = {
@@ -252,7 +255,8 @@ class RaumkernelHelper {
             zoneUdn: null,
             zoneMembers: [roomUdn],
             zoneName: null,
-            sourceSwitchingSupported: this._roomCapabilities.get(rendererUdn) || false
+            sourceSwitchingSupported: this._roomCapabilities.get(rendererUdn) || false,
+            lineInSupported: this._roomLineInCapabilities.get(rendererUdn) || false
         };
     }
 
@@ -326,6 +330,7 @@ class RaumkernelHelper {
                 zoneName: room.zoneName,
                 zoneMembers: room.zoneMembers,
                 sourceSwitchingSupported: room.sourceSwitchingSupported || false,
+                lineInSupported: room.lineInSupported || false,
                 isPlaying: nowPlaying.isPlaying,
                 nowPlaying
             });
@@ -1049,6 +1054,30 @@ class RaumkernelHelper {
         }
     }
 
+    /**
+     * Switches a room's playback to its physical Line-in input.
+     * Used for devices that don't support "Source Select" but do have a
+     * Line-in port (lineInSupported).
+     * @param {string} roomIdentifier
+     */
+    async setRoomLineIn(roomIdentifier) {
+        const room = this.findRoom(roomIdentifier);
+        if (!room) return;
+
+        const renderer = await this._ensureVirtualRenderer(room);
+
+        if (renderer?.loadLineIn) {
+            console.log(`${LOG_PREFIX.COMMAND} Switching ${room.name} to Line-in`);
+            try {
+                await renderer.loadLineIn(room.roomUdn);
+            } catch (err) {
+                console.error(`${LOG_PREFIX.COMMAND} Failed to switch ${room.name} to Line-in: ${err.message}`);
+            }
+        } else {
+            console.warn(`${LOG_PREFIX.COMMAND} No virtual renderer with loadLineIn for ${room.name}`);
+        }
+    }
+
     // ========================================================================
     // MEDIA LOADING
     // ========================================================================
@@ -1269,12 +1298,56 @@ class RaumkernelHelper {
             console.log(`${LOG_PREFIX.REGISTRY} ${rendererUdn} does NOT support Source Select`);
         }
 
+        // Probe for a physical Line-in input. Devices that support "Source Select"
+        // already cover Line-in via that mechanism, so only check standalone
+        // Line-in for devices without it.
+        if (!this._roomCapabilities.get(rendererUdn)) {
+            this._roomLineInCapabilities.set(rendererUdn, await this._probeLineIn(renderer));
+            console.log(`${LOG_PREFIX.REGISTRY} ${rendererUdn} ` +
+                `${this._roomLineInCapabilities.get(rendererUdn) ? "supports" : "does NOT support"} Line-in`);
+        } else {
+            this._roomLineInCapabilities.set(rendererUdn, false);
+        }
+
         // Trigger a state update to reflect the new capability
         const room = this._rooms.get(rendererUdn);
         if (room) {
             room.sourceSwitchingSupported = this._roomCapabilities.get(rendererUdn);
+            room.lineInSupported = this._roomLineInCapabilities.get(rendererUdn);
             this._broadcastRoomStates();
         }
+    }
+
+    /**
+     * Probes a renderer for a physical Line-in input via GetLineInStreamURL.
+     * The device's UPnP server can drop the connection ("socket hang up") if
+     * hit again too soon after a previous call, so retry once after a delay.
+     * @param {*} renderer
+     * @returns {Promise<boolean>}
+     */
+    async _probeLineIn(renderer) {
+        for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+                await new Promise((resolve, reject) => {
+                    renderer.upnpClient.callAction(
+                        "urn:upnp-org:serviceId:RenderingControl",
+                        "GetLineInStreamURL",
+                        {},
+                        (err, res) => err ? reject(err) : resolve(res)
+                    );
+                });
+                return true;
+            } catch (err) {
+                if (/socket hang up/i.test(err?.message || "")) {
+                    await new Promise(r => setTimeout(r, 500));
+                    continue;
+                }
+                // Any other error (e.g. "Line-In stream is not available (404)")
+                // means the device genuinely has no Line-in.
+                return false;
+            }
+        }
+        return false;
     }
 
     // ========================================================================
