@@ -1022,12 +1022,11 @@ class RaumkernelHelper {
         const room = this.findRoom(roomIdentifier);
         if (!room) return;
 
-        let renderer = this._getRendererForRoom(room);
-
-        // For source switching, we want the virtual renderer if possible
-        if (!renderer?.upnpClient) {
-            renderer = await this._ensureVirtualRenderer(room);
-        }
+        // "Source Select" (LineIn/OpticalIn/TV_ARC/...) is implemented by the
+        // physical room renderer's RenderingControl service, not by the virtual
+        // zone renderer. Always target the physical renderer directly.
+        const deviceManager = this._getDeviceManager();
+        const renderer = deviceManager?.mediaRenderers.get(room.rendererUdn);
 
         if (renderer?.upnpClient) {
             console.log(`${LOG_PREFIX.COMMAND} Setting source for ${room.name} to ${source}`);
