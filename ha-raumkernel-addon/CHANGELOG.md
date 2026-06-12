@@ -1,3 +1,7 @@
+## 1.2.28
+
+- Replace `brand/` images with the official Raumfeld-branded icons/logos from [holli73/ha-raumkernel](https://github.com/holli73/ha-raumkernel) (`feat/brand-images` branch), including proper light/dark variants.
+
 ## 1.2.27
 
 - Add color-inverted `dark_icon.png`/`dark_logo.png` for the add-on itself and the bundled integration copy.
