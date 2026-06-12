@@ -1,3 +1,7 @@
+## 1.2.27
+
+- Add color-inverted `dark_icon.png`/`dark_logo.png` for the add-on itself and the bundled integration copy.
+
 ## 1.2.26
 
 - Add `dark_icon.png`/`dark_logo.png` (color-inverted) to the integration's `brand/` directory, per the HA Brands Proxy API, so the logo is visible in dark mode.
