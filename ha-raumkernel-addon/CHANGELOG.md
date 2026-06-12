@@ -1,3 +1,7 @@
+## 1.2.26
+
+- Add `dark_icon.png`/`dark_logo.png` (color-inverted) to the integration's `brand/` directory, per the HA Brands Proxy API, so the logo is visible in dark mode.
+
 ## 1.2.25
 
 - Fix "Input" sensor reverting to "Streaming" right after switching to "Line-in" from a Raumfeld-zone source (e.g. podcast/radio playback). After `setRoomLineIn`, the renderer briefly disconnects/reconnects and reports a stale URI; the "Line-in" source is now protected for 10 seconds to avoid being overridden during this transition.
