@@ -1,3 +1,7 @@
+## 1.2.20
+
+- Fix the "Input" sensor for devices without "Source Select" (e.g. Speaker Bank): correctly detect Line-in by inspecting the current playback URI/title instead of relying on the "Source Select" cache, so it now shows "Line-in" instead of "Streaming" when Line-in is active.
+
 ## 1.2.19
 
 - Add local brand images (`brand/icon.png`, `brand/logo.png`) to the integration, per the [HA Brands Proxy API](https://developers.home-assistant.io/blog/2026/02/24/brands-proxy-api/), so the Raumfeld logo shows up without needing a submission to the brands repository.

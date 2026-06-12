@@ -614,7 +614,7 @@ class RaumkernelHelper {
             ? state.RelativeTimePosition
             : parseToSeconds(state.RelativeTimePosition);
 
-        const currentSource = this._getCurrentSourceForRoom(room, state.AVTransportURI || metadata.uri || '');
+        const currentSource = this._getCurrentSourceForRoom(room, state.AVTransportURI || metadata.uri || '', metadata);
 
         return {
             artist: metadata.artist,
@@ -648,20 +648,26 @@ class RaumkernelHelper {
      * @param {string} uri
      * @returns {string}
      */
-    _getCurrentSourceForRoom(room, uri) {
+    _getCurrentSourceForRoom(room, uri, metadata = {}) {
         if (room?.sourceSwitchingSupported) {
             return this._roomCurrentSourceCache.get(room.rendererUdn) || 'Raumfeld';
         }
 
-        if (uri.startsWith('raumfeld:linein') || uri.startsWith('raumfeld-line-in')) {
-            return 'LineIn';
-        }
-        if (uri.includes('spotifyconnect') || uri.startsWith('spotify:')) {
-            return 'Spotify';
-        }
-        if (uri.includes('tunein')) {
-            return 'Radio';
-        }
+        const lowerUri = uri.toLowerCase();
+        const title = (metadata.track || '').toLowerCase();
+
+        const isLineIn = lowerUri.startsWith('raumfeld:linein')
+            || lowerUri.startsWith('raumfeld-line-in')
+            || lowerUri.includes('linein')
+            || lowerUri.includes('line-in')
+            || lowerUri.includes('/line in/')
+            || title.includes('line in')
+            || title.includes('line-in');
+
+        if (isLineIn) return 'LineIn';
+        if (lowerUri.includes('spotifyconnect') || lowerUri.startsWith('spotify:')) return 'Spotify';
+        if (lowerUri.includes('tunein')) return 'Radio';
+
         return 'Raumfeld';
     }
 
@@ -1143,7 +1149,6 @@ class RaumkernelHelper {
             console.log(`${LOG_PREFIX.COMMAND} Switching ${room.name} to Line-in`);
             try {
                 await renderer.loadLineIn(room.roomUdn);
-                this._roomCurrentSourceCache.set(room.rendererUdn, "LineIn");
                 this._broadcastRoomStates();
             } catch (err) {
                 console.error(`${LOG_PREFIX.COMMAND} Failed to switch ${room.name} to Line-in: ${err.message}`);
