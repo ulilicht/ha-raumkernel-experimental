@@ -118,6 +118,9 @@ class RaumkernelHelper {
 
         /** @type {Map<string, boolean>} Line-in capability cache keyed by RENDERER UDN */
         this._roomLineInCapabilities = new Map();
+
+        /** @type {Map<string, string>} Current "Source Select" value cache keyed by RENDERER UDN */
+        this._roomCurrentSourceCache = new Map();
         
         /** @type {{isReady: boolean, availableRooms: RoomState[], favourites: []}} */
         this._state = {
@@ -160,12 +163,18 @@ class RaumkernelHelper {
                      console.log(`${LOG_PREFIX.REGISTRY} Connected to fixed host: ${this.raumkernel.getSettings().raumfeldHost}`);
                 }
                 this._refreshRoomRegistry();
-                
+
                 // Process initial zone state
                 const zoneManager = this._getZoneManager();
                 if (zoneManager && zoneManager.zoneState) {
                     console.log(`${LOG_PREFIX.REGISTRY} Processing initial zone state`);
                     this._handleZoneStateChange(zoneManager.zoneState);
+                }
+
+                // Periodically refresh the "Source Select" value for soundbars/sounddecks
+                // to pick up changes made outside of HA (e.g. TV auto-switching to ARC).
+                if (!this._sourcePollInterval) {
+                    this._sourcePollInterval = setInterval(() => this._pollCurrentSources(), 30000);
                 }
             }
         });
@@ -601,9 +610,11 @@ class RaumkernelHelper {
         };
 
         const durationSeconds = parseToSeconds(state.CurrentTrackDuration);
-        const positionSeconds = typeof state.RelativeTimePosition === 'number' 
-            ? state.RelativeTimePosition 
+        const positionSeconds = typeof state.RelativeTimePosition === 'number'
+            ? state.RelativeTimePosition
             : parseToSeconds(state.RelativeTimePosition);
+
+        const currentSource = this._getCurrentSourceForRoom(room, state.AVTransportURI || metadata.uri || '');
 
         return {
             artist: metadata.artist,
@@ -623,8 +634,35 @@ class RaumkernelHelper {
             durationSeconds,
             position: this._getPositionForRoom(room, state.RelativeTimePosition || 0),
             positionSeconds: this._getPositionForRoom(room, positionSeconds),
-            powerState
+            powerState,
+            currentSource
         };
+    }
+
+    /**
+     * Determines the current input source for a room.
+     * - Devices with "Source Select" (soundbars/sounddecks): cached raw value
+     *   ("Raumfeld", "LineIn", "OpticalIn", "TV_ARC"), defaulting to "Raumfeld".
+     * - Other devices: derived from the current AVTransportURI.
+     * @param {RoomInfo|null} room
+     * @param {string} uri
+     * @returns {string}
+     */
+    _getCurrentSourceForRoom(room, uri) {
+        if (room?.sourceSwitchingSupported) {
+            return this._roomCurrentSourceCache.get(room.rendererUdn) || 'Raumfeld';
+        }
+
+        if (uri.startsWith('raumfeld:linein') || uri.startsWith('raumfeld-line-in')) {
+            return 'LineIn';
+        }
+        if (uri.includes('spotifyconnect') || uri.startsWith('spotify:')) {
+            return 'Spotify';
+        }
+        if (uri.includes('tunein')) {
+            return 'Radio';
+        }
+        return 'Raumfeld';
     }
 
     /**
@@ -880,6 +918,39 @@ class RaumkernelHelper {
         }
     }
 
+    async enterEcoStandby(roomIdentifier) {
+        const room = this.findRoom(roomIdentifier);
+        if (!room) return;
+
+        console.log(`${LOG_PREFIX.COMMAND} Entering eco/automatic standby for ${room.name} (Room UDN: ${room.roomUdn}, Renderer UDN: ${room.rendererUdn})`);
+
+        try {
+            // We must target the physical renderer for standby
+            const deviceManager = this._getDeviceManager();
+            const renderer = deviceManager.mediaRenderers.get(room.rendererUdn);
+
+            if (renderer) {
+                if (renderer.enterAutomaticStandby) {
+                    await renderer.enterAutomaticStandby();
+                    console.log(`${LOG_PREFIX.COMMAND} Successfully entered eco/automatic standby for ${room.name}`);
+
+                    // Wait a moment for the renderer state to update
+                    await this._delay(500);
+
+                    // Broadcast updated state immediately
+                    this._broadcastRoomStates();
+                } else {
+                     console.warn(`${LOG_PREFIX.COMMAND} Renderer ${room.name} does not support enterAutomaticStandby`);
+                }
+            } else {
+                 console.warn(`${LOG_PREFIX.COMMAND} Renderer not found for ${room.name}. Available renderers: ${Array.from(deviceManager.mediaRenderers.keys()).join(', ')}`);
+            }
+        } catch (err) {
+             console.error(`${LOG_PREFIX.COMMAND} Failed to enter eco/automatic standby for ${room.name}: ${err.message}`);
+             throw err; // Re-throw so caller knows it failed
+        }
+    }
+
     // ========================================================================
     // GROUPING COMMANDS
     // ========================================================================
@@ -1044,6 +1115,8 @@ class RaumkernelHelper {
                         (err, res) => err ? reject(err) : resolve(res)
                     );
                 });
+                this._roomCurrentSourceCache.set(room.rendererUdn, source);
+                this._broadcastRoomStates();
             } catch (err) {
                  console.error(`${LOG_PREFIX.COMMAND} Failed to set source for ${room.name}: ${err.message}`);
                  // We don't throw here to avoid crashing the add-on, but we log it.
@@ -1070,6 +1143,8 @@ class RaumkernelHelper {
             console.log(`${LOG_PREFIX.COMMAND} Switching ${room.name} to Line-in`);
             try {
                 await renderer.loadLineIn(room.roomUdn);
+                this._roomCurrentSourceCache.set(room.rendererUdn, "LineIn");
+                this._broadcastRoomStates();
             } catch (err) {
                 console.error(`${LOG_PREFIX.COMMAND} Failed to switch ${room.name} to Line-in: ${err.message}`);
             }
@@ -1275,13 +1350,49 @@ class RaumkernelHelper {
     // CAPABILITY DETECTION
     // ========================================================================
 
+    /**
+     * Refreshes the cached "Source Select" value for all rooms that support it,
+     * and broadcasts an update if any value changed.
+     */
+    async _pollCurrentSources() {
+        const deviceManager = this._getDeviceManager();
+        if (!deviceManager) return;
+
+        let changed = false;
+        for (const room of this._rooms.values()) {
+            if (!room.sourceSwitchingSupported) continue;
+
+            const renderer = deviceManager.mediaRenderers.get(room.rendererUdn);
+            if (!renderer?.upnpClient) continue;
+
+            try {
+                const res = await new Promise((resolve, reject) => {
+                    renderer.upnpClient.callAction(
+                        "urn:upnp-org:serviceId:RenderingControl",
+                        "GetDeviceSetting",
+                        { InstanceID: 0, Name: "Source Select" },
+                        (err, res) => err ? reject(err) : resolve(res)
+                    );
+                });
+                if (res?.Value && this._roomCurrentSourceCache.get(room.rendererUdn) !== res.Value) {
+                    this._roomCurrentSourceCache.set(room.rendererUdn, res.Value);
+                    changed = true;
+                }
+            } catch {
+                // Ignore transient errors; will retry on next poll.
+            }
+        }
+
+        if (changed) this._broadcastRoomStates();
+    }
+
     async _detectCapabilities(rendererUdn, renderer) {
         if (this._roomCapabilities.has(rendererUdn)) return;
 
         console.log(`${LOG_PREFIX.REGISTRY} detectCapabilities for ${rendererUdn}...`);
         try {
             // Probe for Source Select capability
-            await new Promise((resolve, reject) => {
+            const res = await new Promise((resolve, reject) => {
                 renderer.upnpClient.callAction(
                     "urn:upnp-org:serviceId:RenderingControl",
                     "GetDeviceSetting",
@@ -1291,6 +1402,7 @@ class RaumkernelHelper {
             });
             // If it doesn't throw, it's supported
             this._roomCapabilities.set(rendererUdn, true);
+            if (res?.Value) this._roomCurrentSourceCache.set(rendererUdn, res.Value);
             console.log(`${LOG_PREFIX.REGISTRY} ${rendererUdn} supports Source Select`);
         } catch {
             // 404/500 means not supported

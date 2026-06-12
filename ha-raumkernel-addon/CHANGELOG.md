@@ -1,3 +1,9 @@
+## 1.2.18
+
+- Add a separate "Eco mode" button per room, which puts the device into automatic standby (`EnterAutomaticStandby`) without affecting the existing "Off" button (`EnterManualStandby`).
+- Add two new sensor entities per room: "Power status" (`Off` / `On` / `ECO mode`) and "Input" (current source: Streaming, Line-in, Optical, TV, Spotify, Radio).
+- Track and broadcast the current "Source Select" value for soundbars/sounddecks, with periodic refresh to detect external changes (e.g. TV auto-switching to ARC).
+
 ## 1.2.17
 
 - Use friendly source names in the UI for soundbar/sounddeck source selection: "Streaming", "Line-in", "Optical", "TV" (instead of the raw `Raumfeld`, `LineIn`, `OpticalIn`, `TV_ARC` values).

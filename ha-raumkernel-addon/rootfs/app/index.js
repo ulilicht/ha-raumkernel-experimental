@@ -334,6 +334,10 @@ wss.on('connection', (ws) => {
                     await rkHelper.enterStandby(payload.roomUdn);
                     break;
 
+                case 'enterEcoStandby':
+                    await rkHelper.enterEcoStandby(payload.roomUdn);
+                    break;
+
                 case 'reboot': {
                     // payload: { roomUdn }
                     const roomInfo = rkHelper.findRoom(payload.roomUdn);
