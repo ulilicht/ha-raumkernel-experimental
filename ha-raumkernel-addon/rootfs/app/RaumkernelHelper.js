@@ -1184,6 +1184,9 @@ class RaumkernelHelper {
             console.log(`${LOG_PREFIX.COMMAND} Switching ${room.name} to Line-in`);
             try {
                 await renderer.loadLineIn(room.roomUdn);
+                if (room.rendererUdn) {
+                    this._roomCurrentSourceCache.set(room.rendererUdn, 'LineIn');
+                }
                 this._broadcastRoomStates();
             } catch (err) {
                 console.error(`${LOG_PREFIX.COMMAND} Failed to switch ${room.name} to Line-in: ${err.message}`);

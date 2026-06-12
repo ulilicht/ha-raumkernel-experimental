@@ -1,3 +1,7 @@
+## 1.2.24
+
+- Fix "Input" sensor for devices without "Source Select" (e.g. Raumfeld Connector): immediately mark the source as "Line-in" when `setRoomLineIn` is invoked, instead of relying solely on URI inspection. Switching to Line-in causes the renderer to briefly disconnect/reconnect, during which the `AVTransportURI`-based detection could miss the change.
+
 ## 1.2.23
 
 - Fix "Input" sensor not switching to "Line-in" when coming from "Streaming" (e.g. Spotify Connect or Raumfeld zone playback) on devices without "Source Select": nowPlaying for grouped/zoned rooms is derived from the zone's virtual renderer, which doesn't reflect a Line-in selection made on the physical renderer. Now also checks the physical renderer's `AVTransportURI` for the Line-in pattern.
