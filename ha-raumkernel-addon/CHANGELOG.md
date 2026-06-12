@@ -1,7 +1,3 @@
-## 1.2.18
-
-- Change "Turn off" to put devices into eco/automatic standby (`EnterAutomaticStandby`) instead of full manual standby (`EnterManualStandby`), so devices remain reachable and wake faster.
-
 ## 1.2.17
 
 - Use friendly source names in the UI for soundbar/sounddeck source selection: "Streaming", "Line-in", "Optical", "TV" (instead of the raw `Raumfeld`, `LineIn`, `OpticalIn`, `TV_ARC` values).
