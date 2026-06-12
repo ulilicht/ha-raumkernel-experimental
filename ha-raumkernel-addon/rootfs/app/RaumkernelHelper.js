@@ -616,10 +616,6 @@ class RaumkernelHelper {
 
         const currentSource = this._getCurrentSourceForRoom(room, state.AVTransportURI || metadata.uri || '', metadata);
 
-        if (room && !room.sourceSwitchingSupported) {
-            console.log(`${LOG_PREFIX.MEDIA} [DEBUG currentSource] ${room.name}: AVTransportURI=${JSON.stringify(state.AVTransportURI)} metadata.uri=${JSON.stringify(metadata.uri)} metadata.track=${JSON.stringify(metadata.track)} classString=${JSON.stringify(metadata.classString)} TransportState=${JSON.stringify(state.TransportState)} -> currentSource=${currentSource}`);
-        }
-
         return {
             artist: metadata.artist,
             track: metadata.track,
@@ -660,19 +656,35 @@ class RaumkernelHelper {
         const lowerUri = uri.toLowerCase();
         const title = (metadata.track || '').toLowerCase();
 
+        let detected = null;
+
         const isLineIn = lowerUri.startsWith('raumfeld:linein')
             || lowerUri.startsWith('raumfeld-line-in')
             || lowerUri.includes('linein')
             || lowerUri.includes('line-in')
+            || lowerUri.includes('line%20in')
             || lowerUri.includes('/line in/')
             || title.includes('line in')
             || title.includes('line-in');
 
-        if (isLineIn) return 'LineIn';
-        if (lowerUri.includes('spotifyconnect') || lowerUri.startsWith('spotify:')) return 'Spotify';
-        if (lowerUri.includes('tunein')) return 'Radio';
+        if (isLineIn) {
+            detected = 'LineIn';
+        } else if (lowerUri.includes('spotifyconnect') || lowerUri.startsWith('spotify:')) {
+            detected = 'Spotify';
+        } else if (lowerUri.includes('tunein')) {
+            detected = 'Radio';
+        } else if (uri) {
+            detected = 'Raumfeld';
+        }
 
-        return 'Raumfeld';
+        // While transitioning, AVTransportURI can briefly become empty.
+        // Keep the previously detected source instead of falling back to 'Raumfeld'.
+        if (detected && room?.rendererUdn) {
+            this._roomCurrentSourceCache.set(room.rendererUdn, detected);
+            return detected;
+        }
+
+        return (room?.rendererUdn && this._roomCurrentSourceCache.get(room.rendererUdn)) || 'Raumfeld';
     }
 
     /**

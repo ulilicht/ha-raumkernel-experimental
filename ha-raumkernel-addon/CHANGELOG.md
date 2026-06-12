@@ -1,3 +1,7 @@
+## 1.2.22
+
+- Fix "Input" sensor for devices without "Source Select" (e.g. Speaker Bank): correctly detect "Line-in" from the `dlna-playsingle://...iid=0%2FLine%20In%2F...` URI (URL-encoded "Line In" path was not matched before), and keep the last detected source while `AVTransportURI` is briefly empty during transitions instead of falling back to "Streaming". Removes the temporary debug logging from 1.2.21.
+
 ## 1.2.21
 
 - Debug build: add temporary logging of `AVTransportURI`/metadata for non-Source-Select rooms to diagnose why the "Input" sensor still shows "Streaming" when Line-in is selected.
