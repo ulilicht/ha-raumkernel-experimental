@@ -1,3 +1,7 @@
+## 1.2.23
+
+- Fix "Input" sensor not switching to "Line-in" when coming from "Streaming" (e.g. Spotify Connect or Raumfeld zone playback) on devices without "Source Select": nowPlaying for grouped/zoned rooms is derived from the zone's virtual renderer, which doesn't reflect a Line-in selection made on the physical renderer. Now also checks the physical renderer's `AVTransportURI` for the Line-in pattern.
+
 ## 1.2.22
 
 - Fix "Input" sensor for devices without "Source Select" (e.g. Speaker Bank): correctly detect "Line-in" from the `dlna-playsingle://...iid=0%2FLine%20In%2F...` URI (URL-encoded "Line In" path was not matched before), and keep the last detected source while `AVTransportURI` is briefly empty during transitions instead of falling back to "Streaming". Removes the temporary debug logging from 1.2.21.

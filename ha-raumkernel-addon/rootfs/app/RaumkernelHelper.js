@@ -614,7 +614,22 @@ class RaumkernelHelper {
             ? state.RelativeTimePosition
             : parseToSeconds(state.RelativeTimePosition);
 
-        const currentSource = this._getCurrentSourceForRoom(room, state.AVTransportURI || metadata.uri || '', metadata);
+        // The "Line-in" source is set on the PHYSICAL renderer (via loadLineIn),
+        // but nowPlaying may be derived from the ZONE renderer, which doesn't
+        // reflect it. Check both URIs when detecting the current source.
+        let physicalUri = '';
+        if (room) {
+            const deviceManager = this._getDeviceManager();
+            const physicalRenderer = deviceManager?.mediaRenderers.get(room.rendererUdn);
+            physicalUri = physicalRenderer?.rendererState?.AVTransportURI || '';
+        }
+
+        const currentSource = this._getCurrentSourceForRoom(
+            room,
+            state.AVTransportURI || metadata.uri || '',
+            metadata,
+            physicalUri
+        );
 
         return {
             artist: metadata.artist,
@@ -648,22 +663,26 @@ class RaumkernelHelper {
      * @param {string} uri
      * @returns {string}
      */
-    _getCurrentSourceForRoom(room, uri, metadata = {}) {
+    _getCurrentSourceForRoom(room, uri, metadata = {}, physicalUri = '') {
         if (room?.sourceSwitchingSupported) {
             return this._roomCurrentSourceCache.get(room.rendererUdn) || 'Raumfeld';
         }
 
         const lowerUri = uri.toLowerCase();
+        const lowerPhysicalUri = physicalUri.toLowerCase();
         const title = (metadata.track || '').toLowerCase();
+
+        const matchesLineIn = (u) => u.startsWith('raumfeld:linein')
+            || u.startsWith('raumfeld-line-in')
+            || u.includes('linein')
+            || u.includes('line-in')
+            || u.includes('line%20in')
+            || u.includes('/line in/');
 
         let detected = null;
 
-        const isLineIn = lowerUri.startsWith('raumfeld:linein')
-            || lowerUri.startsWith('raumfeld-line-in')
-            || lowerUri.includes('linein')
-            || lowerUri.includes('line-in')
-            || lowerUri.includes('line%20in')
-            || lowerUri.includes('/line in/')
+        const isLineIn = matchesLineIn(lowerUri)
+            || matchesLineIn(lowerPhysicalUri)
             || title.includes('line in')
             || title.includes('line-in');
 
