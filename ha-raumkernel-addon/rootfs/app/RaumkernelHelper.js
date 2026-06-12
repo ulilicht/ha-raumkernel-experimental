@@ -616,6 +616,10 @@ class RaumkernelHelper {
 
         const currentSource = this._getCurrentSourceForRoom(room, state.AVTransportURI || metadata.uri || '', metadata);
 
+        if (room && !room.sourceSwitchingSupported) {
+            console.log(`${LOG_PREFIX.MEDIA} [DEBUG currentSource] ${room.name}: AVTransportURI=${JSON.stringify(state.AVTransportURI)} metadata.uri=${JSON.stringify(metadata.uri)} metadata.track=${JSON.stringify(metadata.track)} classString=${JSON.stringify(metadata.classString)} TransportState=${JSON.stringify(state.TransportState)} -> currentSource=${currentSource}`);
+        }
+
         return {
             artist: metadata.artist,
             track: metadata.track,

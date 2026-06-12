@@ -1,3 +1,7 @@
+## 1.2.21
+
+- Debug build: add temporary logging of `AVTransportURI`/metadata for non-Source-Select rooms to diagnose why the "Input" sensor still shows "Streaming" when Line-in is selected.
+
 ## 1.2.20
 
 - Fix the "Input" sensor for devices without "Source Select" (e.g. Speaker Bank): correctly detect Line-in by inspecting the current playback URI/title instead of relying on the "Source Select" cache, so it now shows "Line-in" instead of "Streaming" when Line-in is active.
