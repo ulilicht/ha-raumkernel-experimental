@@ -1,3 +1,7 @@
+## 1.2.19
+
+- Add local brand images (`brand/icon.png`, `brand/logo.png`) to the integration, per the [HA Brands Proxy API](https://developers.home-assistant.io/blog/2026/02/24/brands-proxy-api/), so the Raumfeld logo shows up without needing a submission to the brands repository.
+
 ## 1.2.18
 
 - Add a separate "Eco mode" button per room, which puts the device into automatic standby (`EnterAutomaticStandby`) without affecting the existing "Off" button (`EnterManualStandby`).
