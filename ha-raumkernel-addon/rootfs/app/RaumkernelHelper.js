@@ -859,17 +859,17 @@ class RaumkernelHelper {
             const renderer = deviceManager.mediaRenderers.get(room.rendererUdn);
             
             if (renderer) {
-                if (renderer.enterManualStandby) {
-                    await renderer.enterManualStandby();
-                    console.log(`${LOG_PREFIX.COMMAND} Successfully entered standby for ${room.name}`);
-                    
+                if (renderer.enterAutomaticStandby) {
+                    await renderer.enterAutomaticStandby();
+                    console.log(`${LOG_PREFIX.COMMAND} Successfully entered eco/automatic standby for ${room.name}`);
+
                     // Wait a moment for the renderer state to update
                     await this._delay(500);
-                    
+
                     // Broadcast updated state immediately
                     this._broadcastRoomStates();
                 } else {
-                     console.warn(`${LOG_PREFIX.COMMAND} Renderer ${room.name} does not support enterManualStandby`);
+                     console.warn(`${LOG_PREFIX.COMMAND} Renderer ${room.name} does not support enterAutomaticStandby`);
                 }
             } else {
                  console.warn(`${LOG_PREFIX.COMMAND} Renderer not found for ${room.name}. Available renderers: ${Array.from(deviceManager.mediaRenderers.keys()).join(', ')}`);
