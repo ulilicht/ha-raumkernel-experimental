@@ -121,6 +121,10 @@ class RaumkernelHelper {
 
         /** @type {Map<string, string>} Current "Source Select" value cache keyed by RENDERER UDN */
         this._roomCurrentSourceCache = new Map();
+
+        /** @type {Map<string, number>} Timestamp until which a cached "LineIn" source should not be
+         *  overridden by stale URI-based detection (renderer reconnect after Line-in switch) */
+        this._roomLineInGraceUntil = new Map();
         
         /** @type {{isReady: boolean, availableRooms: RoomState[], favourites: []}} */
         this._state = {
@@ -696,6 +700,16 @@ class RaumkernelHelper {
             detected = 'Raumfeld';
         }
 
+        // Just after switching to Line-in, the renderer disconnects/reconnects and may
+        // briefly report a stale "Raumfeld" URI. Don't let that override "LineIn"
+        // during the grace window.
+        if (detected === 'Raumfeld' && room?.rendererUdn) {
+            const graceUntil = this._roomLineInGraceUntil.get(room.rendererUdn) || 0;
+            if (Date.now() < graceUntil && this._roomCurrentSourceCache.get(room.rendererUdn) === 'LineIn') {
+                return 'LineIn';
+            }
+        }
+
         // While transitioning, AVTransportURI can briefly become empty.
         // Keep the previously detected source instead of falling back to 'Raumfeld'.
         if (detected && room?.rendererUdn) {
@@ -1186,6 +1200,10 @@ class RaumkernelHelper {
                 await renderer.loadLineIn(room.roomUdn);
                 if (room.rendererUdn) {
                     this._roomCurrentSourceCache.set(room.rendererUdn, 'LineIn');
+                    // The renderer disconnects/reconnects after switching to Line-in,
+                    // and may briefly report stale (non-Line-in) URIs. Protect the
+                    // "LineIn" source from being overridden during that window.
+                    this._roomLineInGraceUntil.set(room.rendererUdn, Date.now() + 10000);
                 }
                 this._broadcastRoomStates();
             } catch (err) {

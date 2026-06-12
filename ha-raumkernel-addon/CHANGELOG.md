@@ -1,3 +1,7 @@
+## 1.2.25
+
+- Fix "Input" sensor reverting to "Streaming" right after switching to "Line-in" from a Raumfeld-zone source (e.g. podcast/radio playback). After `setRoomLineIn`, the renderer briefly disconnects/reconnects and reports a stale URI; the "Line-in" source is now protected for 10 seconds to avoid being overridden during this transition.
+
 ## 1.2.24
 
 - Fix "Input" sensor for devices without "Source Select" (e.g. Raumfeld Connector): immediately mark the source as "Line-in" when `setRoomLineIn` is invoked, instead of relying solely on URI inspection. Switching to Line-in causes the renderer to briefly disconnect/reconnect, during which the `AVTransportURI`-based detection could miss the change.
